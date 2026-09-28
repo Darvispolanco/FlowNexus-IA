@@ -1,4 +1,4 @@
-from agent import FlowNexusAgent
+from .agent import FlowNexusAgent
 
 
 def show_banner():
