@@ -1,11 +1,12 @@
 from typing import Optional
 
-from executor import CodeExecutor, ExecutionResult
-from llm import LLMClient
-from memory import Memory
-from prompts import SYSTEM_PROMPT
-from researcher import SearchResult, WebResearcher, format_results
+from typing import Optional
 
+from .executor import CodeExecutor, ExecutionResult
+from .llm import LLMClient
+from .memory import Memory
+from .prompts import SYSTEM_PROMPT
+from .researcher import SearchResult, WebResearcher, format_results
 
 class FlowNexusAgent:
     """
