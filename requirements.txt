@@ -1,5 +1,17 @@
+# ==========================================
+# FLOWNEXUS AI - DEPENDENCIAS
+# ==========================================
+
+# OpenAI
 openai
+
+# Configuración
 python-dotenv
+
+# Investigación web
 requests
 beautifulsoup4
 duckduckgo-search
+
+# Pruebas
+pytest
