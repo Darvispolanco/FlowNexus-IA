@@ -2,7 +2,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-from config import MEMORY_FILE
+from .config import MEMORY_FILE
 
 
 # ============================================================
