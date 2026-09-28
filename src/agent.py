@@ -1,7 +1,9 @@
 from typing import Optional
 
 from executor import CodeExecutor, ExecutionResult
+from llm import LLMClient
 from memory import Memory
+from prompts import SYSTEM_PROMPT
 from researcher import SearchResult, WebResearcher, format_results
 
 
@@ -10,23 +12,68 @@ class FlowNexusAgent:
     Agente principal de FlowNexus AI.
 
     Coordina:
+
+    - Modelo de IA
     - Memoria
     - Investigación web
     - Ejecución de código
-
-    La conexión con el modelo de IA se agregará posteriormente.
     """
 
     def __init__(self):
         self.memory = Memory()
         self.researcher = WebResearcher()
         self.executor = CodeExecutor()
+        self.llm = LLMClient()
+
+    # ==========================================================
+    # CONVERSACIÓN CON EL MODELO
+    # ==========================================================
+
+    def ask(self, prompt: str) -> str:
+        """
+        Envía una pregunta al modelo utilizando
+        el historial reciente de conversación.
+        """
+
+        if not prompt.strip():
+            raise ValueError(
+                "El mensaje no puede estar vacío."
+            )
+
+        self.remember(
+            role="user",
+            content=prompt
+        )
+
+        messages = [
+            {
+                "role": "developer",
+                "content": SYSTEM_PROMPT
+            }
+        ]
+
+        messages.extend(
+            self.get_memory(limit=20)
+        )
+
+        response = self.llm.chat(messages)
+
+        self.remember(
+            role="assistant",
+            content=response
+        )
+
+        return response
 
     # ==========================================================
     # MEMORIA
     # ==========================================================
 
-    def remember(self, role: str, content: str):
+    def remember(
+        self,
+        role: str,
+        content: str
+    ):
         """
         Guarda un mensaje en la memoria.
         """
@@ -36,16 +83,21 @@ class FlowNexusAgent:
             content=content
         )
 
-    def get_memory(self, limit: int = 20):
+    def get_memory(
+        self,
+        limit: int = 20
+    ):
         """
-        Obtiene los últimos mensajes almacenados.
+        Obtiene los últimos mensajes.
         """
 
-        return self.memory.get_recent_messages(limit)
+        return self.memory.get_recent_messages(
+            limit
+        )
 
     def clear_memory(self):
         """
-        Borra toda la memoria de conversación.
+        Elimina toda la memoria.
         """
 
         self.memory.clear()
@@ -60,7 +112,7 @@ class FlowNexusAgent:
         max_results: Optional[int] = None
     ) -> list[SearchResult]:
         """
-        Realiza una búsqueda en la web.
+        Realiza una búsqueda web.
         """
 
         return self.researcher.search(
@@ -75,8 +127,7 @@ class FlowNexusAgent:
     ) -> str:
         """
         Busca información y devuelve las fuentes
-        en un formato que posteriormente podrá
-        utilizar el modelo de IA.
+        encontradas.
         """
 
         results = self.search(
@@ -86,17 +137,13 @@ class FlowNexusAgent:
 
         return format_results(results)
 
-    # ==========================================================
-    # LECTURA DE PÁGINAS
-    # ==========================================================
-
     def read_url(
         self,
         url: str,
         max_chars: int = 20000
     ) -> Optional[str]:
         """
-        Lee el contenido textual de una página web.
+        Lee el contenido de una página web.
         """
 
         return self.researcher.read_page(
@@ -125,7 +172,7 @@ class FlowNexusAgent:
         file_path: str
     ) -> ExecutionResult:
         """
-        Ejecuta un archivo Python dentro de workspace/.
+        Ejecuta un archivo Python.
         """
 
         return self.executor.run(
@@ -133,12 +180,12 @@ class FlowNexusAgent:
         )
 
     # ==========================================================
-    # INFORMACIÓN DEL AGENTE
+    # ESTADO
     # ==========================================================
 
     def status(self):
         """
-        Muestra el estado actual de FlowNexus.
+        Muestra el estado del agente.
         """
 
         print("\n========== FLOWNEXUS STATUS ==========\n")
@@ -154,7 +201,12 @@ class FlowNexusAgent:
         )
 
         print(
-            f"Buscador web: "
+            f"Modelo: "
+            f"{self.llm.model}"
+        )
+
+        print(
+            f"Investigador: "
             f"{type(self.researcher).__name__}"
         )
 
