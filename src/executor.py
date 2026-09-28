@@ -4,7 +4,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-from config import WORKSPACE_DIR
+from .config import WORKSPACE_DIR
 
 
 @dataclass
