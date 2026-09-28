@@ -39,47 +39,91 @@ Comandos disponibles:
   /run <archivo.py>
       Ejecuta un archivo Python dentro de workspace/.
 
+  /test
+      Comprueba la conexión con el modelo de IA.
+
   /exit
       Cierra FlowNexus.
 
-Cualquier otro texto será tratado como mensaje normal.
+Cualquier otro texto será enviado al modelo de IA.
 """)
 
 
-def handle_command(agent: FlowNexusAgent, command: str) -> bool:
+def handle_command(agent: FlowNexusAgent, command: str):
     """
     Procesa comandos especiales.
 
-    Devuelve:
-        True  -> continuar ejecutando FlowNexus
+    Retorna:
+        True  -> comando procesado
         False -> salir
+        None  -> no es un comando conocido
     """
 
     command = command.strip()
+
+    # ----------------------------------------------------------
+    # SALIR
+    # ----------------------------------------------------------
 
     if command == "/exit":
         print("\nCerrando FlowNexus...\n")
         return False
 
+    # ----------------------------------------------------------
+    # AYUDA
+    # ----------------------------------------------------------
+
     if command == "/help":
         show_help()
         return True
+
+    # ----------------------------------------------------------
+    # ESTADO
+    # ----------------------------------------------------------
 
     if command == "/status":
         agent.status()
         return True
 
+    # ----------------------------------------------------------
+    # MEMORIA
+    # ----------------------------------------------------------
+
     if command == "/memory":
         agent.memory.show()
         return True
+
+    # ----------------------------------------------------------
+    # LIMPIAR MEMORIA
+    # ----------------------------------------------------------
 
     if command == "/clear":
         agent.clear_memory()
         print("\nMemoria eliminada correctamente.\n")
         return True
 
+    # ----------------------------------------------------------
+    # TEST DE CONEXIÓN
+    # ----------------------------------------------------------
+
+    if command == "/test":
+        print("\nProbando conexión con el modelo...\n")
+
+        success = agent.llm.test_connection()
+
+        if success:
+            print("\n✓ Conexión correcta.\n")
+        else:
+            print("\n✗ No se pudo establecer la conexión.\n")
+
+        return True
+
+    # ----------------------------------------------------------
+    # BÚSQUEDA WEB
+    # ----------------------------------------------------------
+
     if command.startswith("/search "):
-        query = command[8:].strip()
+        query = command[len("/search "):].strip()
 
         if not query:
             print("Debes escribir una consulta.")
@@ -101,8 +145,12 @@ def handle_command(agent: FlowNexusAgent, command: str) -> bool:
 
         return True
 
+    # ----------------------------------------------------------
+    # LEER URL
+    # ----------------------------------------------------------
+
     if command.startswith("/read "):
-        url = command[6:].strip()
+        url = command[len("/read "):].strip()
 
         if not url:
             print("Debes proporcionar una URL.")
@@ -117,10 +165,15 @@ def handle_command(agent: FlowNexusAgent, command: str) -> bool:
             return True
 
         print(content)
+
         return True
 
+    # ----------------------------------------------------------
+    # COMPROBAR CÓDIGO
+    # ----------------------------------------------------------
+
     if command.startswith("/check "):
-        file_path = command[7:].strip()
+        file_path = command[len("/check "):].strip()
 
         if not file_path:
             print("Debes indicar un archivo.")
@@ -132,18 +185,25 @@ def handle_command(agent: FlowNexusAgent, command: str) -> bool:
             print("\n✓ Sintaxis correcta.\n")
         else:
             print("\n✗ Se encontraron errores:\n")
-            print(result.error)
+
+            if result.error:
+                print(result.error)
 
         return True
 
+    # ----------------------------------------------------------
+    # EJECUTAR CÓDIGO
+    # ----------------------------------------------------------
+
     if command.startswith("/run "):
-        file_path = command[5:].strip()
+        file_path = command[len("/run "):].strip()
 
         if not file_path:
             print("Debes indicar un archivo.")
             return True
 
         agent.executor.run_and_print(file_path)
+
         return True
 
     return None
@@ -152,44 +212,24 @@ def handle_command(agent: FlowNexusAgent, command: str) -> bool:
 def main():
     show_banner()
 
-    agent = FlowNexusAgent()
+    try:
+        agent = FlowNexusAgent()
 
-    print("Escribe /help para ver los comandos disponibles.")
-    print("Escribe /exit para salir.\n")
+    except Exception as error:
+        print("\n[ERROR] No se pudo iniciar FlowNexus.")
+        print(error)
+        print()
+        return
+
+    print("FlowNexus está listo.")
+    print("Escribe /help para ver los comandos.")
+    print("Escribe /exit para salir.")
+    print()
 
     while True:
+
         try:
             user_input = input("Tú → ").strip()
-
-            if not user_input:
-                continue
-
-            if user_input.startswith("/"):
-                result = handle_command(agent, user_input)
-
-                if result is False:
-                    break
-
-                if result is True:
-                    continue
-
-                print("Comando desconocido. Escribe /help.")
-                continue
-
-            agent.remember(
-                role="user",
-                content=user_input
-            )
-
-            print(
-                "\n[FlowNexus] "
-                "Todavía no tengo conectado el modelo de IA."
-            )
-
-            print(
-                "La estructura del agente ya está preparada "
-                "para conectarlo.\n"
-            )
 
         except KeyboardInterrupt:
             print("\n\nFlowNexus detenido.")
@@ -199,10 +239,48 @@ def main():
             print("\n\nFlowNexus detenido.")
             break
 
-        except Exception as error:
-            print(
-                f"\n[ERROR] {error}\n"
+        if not user_input:
+            continue
+
+        # ------------------------------------------------------
+        # COMANDOS
+        # ------------------------------------------------------
+
+        if user_input.startswith("/"):
+            result = handle_command(
+                agent,
+                user_input
             )
+
+            if result is False:
+                break
+
+            if result is True:
+                continue
+
+            print(
+                "Comando desconocido. "
+                "Escribe /help."
+            )
+
+            continue
+
+        # ------------------------------------------------------
+        # MENSAJE NORMAL → IA
+        # ------------------------------------------------------
+
+        print("\nFlowNexus → ", end="", flush=True)
+
+        try:
+            response = agent.ask(user_input)
+
+            print(response)
+            print()
+
+        except Exception as error:
+            print("\n[ERROR]")
+            print(error)
+            print()
 
 
 if __name__ == "__main__":
